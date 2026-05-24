@@ -9,7 +9,13 @@ import { ensureSchema } from './db/ensureSchema';
 
 async function main() {
   const env = loadEnv();
-  await ensureSchema(env.DATABASE_URL);
+
+  try {
+    await ensureSchema(env.DATABASE_URL);
+  } catch (err) {
+    console.error('ensureSchema failed:', err);
+  }
+
   const server = http.createServer();
 
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
