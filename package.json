@@ -1,0 +1,52 @@
+{
+  "name": "runrace-live",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./apps/mobile/index.js",
+  "description": "RunRace Live — real-time competitive GPS running platform",
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "apps/mobile",
+    "apps/admin"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,mobile,admin -c blue,green,magenta \"npm run dev -w backend\" \"npm run start -w @runrace/mobile\" \"npm run dev -w @runrace/admin\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:mobile": "npm run start -w @runrace/mobile",
+    "dev:mobile:tunnel": "npm run start:tunnel -w @runrace/mobile",
+    "dev:admin": "npm run dev -w @runrace/admin",
+    "build": "npm run build -w @runrace/shared && npm run build -w backend && npm run build -w @runrace/admin",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:seed": "npm run db:seed -w backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-worklets": "0.5.1",
+    "@react-native/assets-registry": "0.81.5",
+    "@react-native/babel-preset": "0.81.5",
+    "@react-native/codegen": "0.81.5",
+    "@react-native/community-cli-plugin": "0.81.5",
+    "@react-native/debugger-frontend": "0.81.5",
+    "@react-native/dev-middleware": "0.81.5",
+    "@react-native/gradle-plugin": "0.81.5",
+    "@react-native/js-polyfills": "0.81.5",
+    "@react-native/normalize-colors": "0.81.5",
+    "@react-native/virtualized-lists": "0.81.5",
+    "react-native-reanimated": {
+      "react-native-worklets": "0.5.1"
+    }
+  }
+}
