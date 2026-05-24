@@ -15,7 +15,6 @@ services:
     rootDir: .
     buildCommand: npm install && npm run build -w @runrace/shared && npm run build -w backend
     startCommand: npm run start -w backend
-    preDeployCommand: npm run db:apply-schema -w backend
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

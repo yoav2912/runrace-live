@@ -5,9 +5,11 @@ import type { ClientToServerEvents, ServerToClientEvents } from '@runrace/shared
 import { loadEnv } from './config/env';
 import { createApp } from './app';
 import { registerSocketHandlers } from './socket/SocketHandler';
+import { ensureSchema } from './db/ensureSchema';
 
 async function main() {
   const env = loadEnv();
+  await ensureSchema(env.DATABASE_URL);
   const server = http.createServer();
 
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
