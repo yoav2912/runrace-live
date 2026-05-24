@@ -8,18 +8,20 @@ import type { RaceRepository } from '../repositories/RaceRepository';
 import { raceEngine } from '../modules/races/RaceEngine';
 import { antiCheatEngine } from '../modules/anti-cheat/AntiCheatEngine';
 import type { GpsSample } from '@runrace/shared';
-import { CHEAT_MAX_STRIKES } from '@runrace/shared';
+import {
+  buildAntiCheatDisqualifiedMessage,
+  buildAntiCheatWarningMessage,
+  CHEAT_MAX_STRIKES,
+  MIN_TRUST_SCORE_RACE,
+} from '@runrace/shared';
 import { beginRaceCountdown } from './raceCountdown';
 import { registerMatchmakingHandlers } from './matchmakingSocket';
+import { finalizeLiveRace } from '../modules/races/finalizeLiveRace';
+import { markRaceViolation } from '../modules/races/raceViolations';
 
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
-const gpsHistoryByUser = new Map<string, GpsSample[]>();
-const cheatStrikesByUser = new Map<string, number>();
-
-function strikeKey(raceId: string, userId: string): string {
-  return `${raceId}:${userId}`;
-}
+import { cheatStrikesByUser, gpsHistoryByUser, sessionKey } from './gpsSession';
 
 export function registerSocketHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -61,18 +63,26 @@ export function registerSocketHandlers(
       }
 
       const alreadyIn = race.participants.has(authUser.id);
-      const joined =
-        alreadyIn
-          ? race.participants.get(authUser.id)
-          : raceEngine.joinRace(race.id, {
-              id: profile.id,
-              username: profile.username,
-              avatarUrl: profile.avatarUrl,
-              trustScore: profile.trustScore,
-            });
+      let joined = alreadyIn ? race.participants.get(authUser.id) : null;
 
       if (!joined) {
-        ack?.({ ok: false, error: 'Cannot join' });
+        joined = raceEngine.joinRace(race.id, {
+          id: profile.id,
+          username: profile.username,
+          avatarUrl: profile.avatarUrl,
+          trustScore: profile.trustScore,
+        });
+      }
+
+      if (!joined) {
+        const liveRace = raceEngine.getRace(race.id);
+        let error = 'Cannot join';
+        if (liveRace && liveRace.status !== 'lobby') error = 'המירוץ כבר התחיל';
+        else if (profile.trustScore < MIN_TRUST_SCORE_RACE) error = 'ציון אמון נמוך מדי להצטרף';
+        else if (liveRace && liveRace.participants.size >= liveRace.config.maxParticipants) {
+          error = 'המירוץ מלא';
+        }
+        ack?.({ ok: false, error });
         return;
       }
 
@@ -125,7 +135,7 @@ export function registerSocketHandlers(
       const participant = race.participants.get(authUser.id);
       if (participant?.disqualified) return;
 
-      const historyKey = strikeKey(payload.raceId, authUser.id);
+      const historyKey = sessionKey(payload.raceId, authUser.id);
       const previousSamples = gpsHistoryByUser.get(historyKey) ?? [];
       const sample: GpsSample = {
         lat: payload.lat,
@@ -160,6 +170,7 @@ export function registerSocketHandlers(
       );
 
       if (!cheatResult.allowed) {
+        markRaceViolation(payload.raceId, authUser.id);
         const strikes = (cheatStrikesByUser.get(historyKey) ?? 0) + 1;
         cheatStrikesByUser.set(historyKey, strikes);
 
@@ -171,18 +182,27 @@ export function registerSocketHandlers(
             confidence: cheatResult.confidence,
           });
         }
-        await users.updateTrustScore(authUser.id, cheatResult.trustDelta, 'gps_validation_failed');
+        const trustAfter = await users.updateTrustScore(
+          authUser.id,
+          cheatResult.trustDelta,
+          'gps_validation_failed',
+        );
 
         if (strikes >= CHEAT_MAX_STRIKES) {
           raceEngine.disqualifyParticipant(payload.raceId, authUser.id);
           cheatStrikesByUser.delete(historyKey);
           gpsHistoryByUser.delete(historyKey);
 
-          const dqMessage = 'פסילה מהמירוץ — זוהתה רמאות (למשל נסיעה ברכב)';
+          const dqMessage = buildAntiCheatDisqualifiedMessage(
+            cheatResult.trustDelta,
+            trustAfter,
+          );
           socket.emit('anti-cheat:disqualified', {
             raceId: payload.raceId,
             message: dqMessage,
             strikes,
+            trustDelta: cheatResult.trustDelta,
+            trustScoreAfter: trustAfter,
           });
 
           const live = raceEngine.toLiveRace(payload.raceId);
@@ -195,23 +215,27 @@ export function registerSocketHandlers(
           }
 
           if (raceEngine.isRaceComplete(payload.raceId)) {
-            const results = raceEngine.finishRace(payload.raceId);
-            if (results) {
-              await raceRepo.saveReplay(payload.raceId, { results, finishedAt: new Date() });
-              io.to(`race:${payload.raceId}`).emit('race:finished', {
-                raceId: payload.raceId,
-                results,
-              });
-            }
+            await finalizeLiveRace(io, payload.raceId, users, raceRepo);
           }
           return;
         }
 
+        const warningMessage = buildAntiCheatWarningMessage({
+          reason: cheatResult.reason ?? 'תנועה חשודה',
+          strikes,
+          maxStrikes: CHEAT_MAX_STRIKES,
+          trustDelta: cheatResult.trustDelta,
+          trustScoreAfter: trustAfter,
+          flags: cheatResult.flags,
+        });
+
         socket.emit('anti-cheat:warning', {
-          message: `${cheatResult.reason ?? 'תנועה חשודה'} (${strikes}/${CHEAT_MAX_STRIKES})`,
+          message: warningMessage,
           result: cheatResult,
           strikes,
           maxStrikes: CHEAT_MAX_STRIKES,
+          trustDelta: cheatResult.trustDelta,
+          trustScoreAfter: trustAfter,
         });
         return;
       }
@@ -258,15 +282,7 @@ export function registerSocketHandlers(
       });
 
       if (raceEngine.isRaceComplete(payload.raceId)) {
-        const results = raceEngine.finishRace(payload.raceId);
-        if (results) {
-          await raceRepo.saveReplay(payload.raceId, { results, finishedAt: new Date() });
-          io.to(`race:${payload.raceId}`).emit('race:finished', {
-            raceId: payload.raceId,
-            results,
-          });
-          gpsHistoryByUser.delete(historyKey);
-        }
+        await finalizeLiveRace(io, payload.raceId, users, raceRepo);
       }
     });
 

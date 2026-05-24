@@ -69,11 +69,14 @@ export class RaceEngine {
     user: { id: string; username: string; avatarUrl?: string; trustScore: number },
   ): InMemoryParticipant | null {
     const race = this.races.get(raceId);
-    if (!race || race.status !== 'lobby') return null;
-    if (user.trustScore < MIN_TRUST_SCORE_RACE) return null;
+    if (!race) return null;
+
     if (race.participants.has(user.id)) {
       return race.participants.get(user.id)!;
     }
+
+    if (race.status !== 'lobby') return null;
+    if (user.trustScore < MIN_TRUST_SCORE_RACE) return null;
     if (race.participants.size >= race.config.maxParticipants) return null;
 
     const participant: InMemoryParticipant = {

@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { UserProfile, UserStats } from '@runrace/shared';
+import type { TrustHistoryItem, UserProfile, UserStats } from '@runrace/shared';
 
 export class UserRepository {
   constructor(private pool: Pool) {}
@@ -82,15 +82,48 @@ export class UserRepository {
   async updateTrustScore(userId: string, delta: number, reason: string): Promise<number> {
     const { rows } = await this.pool.query(
       `UPDATE users SET trust_score = GREATEST(0, LEAST(100, trust_score + $2)), updated_at = NOW()
-       WHERE id = $1 RETURNING trust_score`,
+       WHERE id = $1
+       RETURNING trust_score AS new_score, trust_score - $2 AS previous_score`,
       [userId, delta],
     );
+    const newScore = Number(rows[0]?.new_score ?? 0);
+    const previousScore = Number(rows[0]?.previous_score ?? newScore - delta);
     await this.pool.query(
       `INSERT INTO trust_score_history (user_id, previous_score, new_score, delta, reason)
-       SELECT id, trust_score - $2, trust_score, $2, $3 FROM users WHERE id = $1`,
-      [userId, delta, reason],
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, previousScore, newScore, delta, reason],
     );
-    return Number(rows[0]?.trust_score ?? 0);
+    return newScore;
+  }
+
+  async recordRaceResult(userId: string, won: boolean): Promise<void> {
+    await this.pool.query(
+      `UPDATE users SET
+         total_races = total_races + 1,
+         wins = wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+         win_streak = CASE WHEN $2 THEN win_streak + 1 ELSE 0 END,
+         updated_at = NOW()
+       WHERE id = $1`,
+      [userId, won],
+    );
+  }
+
+  async getTrustHistory(userId: string, limit = 50): Promise<TrustHistoryItem[]> {
+    const { rows } = await this.pool.query(
+      `SELECT id, delta, new_score, reason, created_at
+       FROM trust_score_history
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit],
+    );
+    return rows.map((row: Record<string, unknown>) => ({
+      id: String(row.id),
+      delta: Number(row.delta),
+      newScore: Number(row.new_score),
+      reason: row.reason ? String(row.reason) : null,
+      createdAt: new Date(String(row.created_at)).toISOString(),
+    }));
   }
 
   private mapProfile(row: Record<string, unknown>): UserProfile {

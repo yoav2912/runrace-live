@@ -19,7 +19,17 @@ export interface ServerToClientEvents {
   'race:updated': (race: LiveRace) => void;
   'race:countdown': (payload: { raceId: string; secondsLeft: number }) => void;
   'race:started': (payload: { raceId: string; startedAt: string }) => void;
-  'race:finished': (payload: { raceId: string; results: RacerState[] }) => void;
+  'race:finished': (payload: {
+    raceId: string;
+    results: RacerState[];
+    trustRewards?: Record<string, { delta: number; cleanRace: boolean; trustScoreAfter: number }>;
+  }) => void;
+  'trust:updated': (payload: {
+    delta: number;
+    trustScoreAfter: number;
+    reason: string;
+    raceId?: string;
+  }) => void;
   'leaderboard:update': (payload: { raceId: string; racers: RacerState[] }) => void;
   'racer:position': (payload: { raceId: string; racer: RacerState }) => void;
   'anti-cheat:warning': (payload: {
@@ -27,11 +37,15 @@ export interface ServerToClientEvents {
     result: AntiCheatResult;
     strikes: number;
     maxStrikes: number;
+    trustDelta: number;
+    trustScoreAfter: number;
   }) => void;
   'anti-cheat:disqualified': (payload: {
     raceId: string;
     message: string;
     strikes: number;
+    trustDelta: number;
+    trustScoreAfter: number;
   }) => void;
   'race:invite': (payload: { raceId: string; code: string; fromUsername: string }) => void;
   'voice:signal': (payload: { fromUserId: string; signal: unknown }) => void;

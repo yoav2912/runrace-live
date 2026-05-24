@@ -7,7 +7,7 @@ import { colors } from '@/theme/colors';
 
 export default function RaceSummaryScreen() {
   const user = useAuthStore((s) => s.user);
-  const { activeRace, leaderboard, clear } = useRaceStore();
+  const { activeRace, leaderboard, lastRaceTrustBonus, clear } = useRaceStore();
 
   if (!activeRace) {
     router.replace('/(tabs)');
@@ -23,6 +23,7 @@ export default function RaceSummaryScreen() {
         race={race}
         me={me}
         userId={user?.id}
+        trustBonus={lastRaceTrustBonus}
         onDone={() => {
           clear();
           router.replace('/(tabs)');

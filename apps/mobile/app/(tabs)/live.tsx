@@ -17,8 +17,16 @@ import { colors, spacing } from '@/theme/colors';
 
 export default function LiveRaceScreen() {
   const user = useAuthStore((s) => s.user);
-  const { activeRace, leaderboard, countdown, cheatWarning, setReady, devFinishRace, clear } =
-    useRaceStore();
+  const {
+    activeRace,
+    leaderboard,
+    countdown,
+    cheatWarning,
+    lastRaceTrustBonus,
+    setReady,
+    devFinishRace,
+    clear,
+  } = useRaceStore();
   const localSpeedMps = useLiveGpsStore((s) => s.speedMps);
   const [tracking, setTracking] = useState(false);
   const targetDistanceM = activeRace?.config.targetDistanceM;
@@ -111,7 +119,13 @@ export default function LiveRaceScreen() {
       <View style={styles.header}>
         <Text style={styles.code}>RACE {activeRace.code}</Text>
         {cheatWarning && !showResults && (
-          <Text style={styles.warning}>{cheatWarning}</Text>
+          <View style={styles.warningBox}>
+            {cheatWarning.split('\n').map((line, i) => (
+              <Text key={`${i}-${line}`} style={styles.warningLine}>
+                {line}
+              </Text>
+            ))}
+          </View>
         )}
       </View>
 
@@ -135,6 +149,7 @@ export default function LiveRaceScreen() {
           race={{ ...activeRace, racers: leaderboard, status: 'finished' }}
           me={me}
           userId={user?.id}
+          trustBonus={lastRaceTrustBonus}
           onDone={() => {
             clear();
             stopRaceTracking();
@@ -206,7 +221,15 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: spacing.lg },
   header: { paddingTop: 56, paddingHorizontal: spacing.lg, zIndex: 10 },
   code: { color: colors.neon, fontWeight: '800', letterSpacing: 2 },
-  warning: { color: colors.danger, marginTop: spacing.sm },
+  warningBox: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    backgroundColor: 'rgba(255, 80, 80, 0.12)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  warningLine: { color: colors.danger, fontSize: 12, lineHeight: 18 },
   mapWrap: {
     flex: 1,
     margin: spacing.md,

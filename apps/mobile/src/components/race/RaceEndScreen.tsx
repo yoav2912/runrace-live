@@ -9,10 +9,11 @@ interface Props {
   race: LiveRace;
   me?: RacerState;
   userId?: string;
+  trustBonus?: number | null;
   onDone: () => void;
 }
 
-export function RaceEndScreen({ race, me, userId, onDone }: Props) {
+export function RaceEndScreen({ race, me, userId, trustBonus, onDone }: Props) {
   const winner = race.racers[0];
   const disqualified = me?.disqualified ?? false;
   const didWin = !disqualified && winner?.userId === userId;
@@ -60,6 +61,10 @@ export function RaceEndScreen({ race, me, userId, onDone }: Props) {
           <Text style={styles.opponentNote}>
             ניצח: {winner.username} · {formatKm(winner.distanceM / 1000)} km
           </Text>
+        )}
+
+        {trustBonus != null && trustBonus > 0 && !disqualified && (
+          <Text style={styles.trustBonus}>+{trustBonus} ציון אמון — מירוץ נקי</Text>
         )}
 
         <Text style={styles.code}>RACE {race.code}</Text>
@@ -123,6 +128,13 @@ const styles = StyleSheet.create({
   opponentNote: {
     color: colors.textMuted,
     fontSize: 14,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  trustBonus: {
+    color: colors.neon,
+    fontSize: 16,
+    fontWeight: '800',
     marginTop: spacing.lg,
     textAlign: 'center',
   },

@@ -7,6 +7,7 @@ import { createAuthMiddleware } from '../middleware/auth';
 import type { UserRepository } from '../repositories/UserRepository';
 import type { RaceRepository } from '../repositories/RaceRepository';
 import { raceEngine } from '../modules/races/RaceEngine';
+import { finalizeLiveRace } from '../modules/races/finalizeLiveRace';
 import { matchmakingService } from '../modules/matchmaking/MatchmakingService';
 import {
   emitMatchmakingStats,
@@ -132,19 +133,12 @@ export function createRacesRoutes(
       return;
     }
 
-    try {
-      await raceRepo.saveReplay(raceId, { results, finishedAt: new Date() });
-    } catch {
-      /* optional persistence */
-    }
-
     if (io) {
       const live = raceEngine.toLiveRace(raceId);
       if (live) io.to(`race:${raceId}`).emit('race:updated', live);
-      io.to(`race:${raceId}`).emit('race:finished', {
-        raceId,
-        results,
-      });
+      await finalizeLiveRace(io, raceId, users, raceRepo, results);
+    } else {
+      await finalizeLiveRace(undefined, raceId, users, raceRepo, results);
     }
 
     res.json({ results });

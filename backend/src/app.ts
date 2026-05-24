@@ -45,7 +45,7 @@ export function createApp(env: Env, io?: Io) {
   });
 
   app.use('/api/auth', createAuthRoutes(env, users));
-  app.use('/api/users', createUsersRoutes(env, users));
+  app.use('/api/users', createUsersRoutes(env, users, races));
   app.use('/api/races', createRacesRoutes(env, users, races, io));
   app.use('/api/social', createSocialRoutes(env, pool));
   app.use('/api/gamification', createGamificationRoutes(env, pool));

@@ -13,6 +13,7 @@ interface RaceState {
   leaderboard: RacerState[];
   countdown: number | null;
   cheatWarning: string | null;
+  lastRaceTrustBonus: number | null;
   socketListenersReady: boolean;
   createRace: (config: Record<string, unknown>) => Promise<LiveRace>;
   joinByCode: (code: string) => Promise<void>;
@@ -41,6 +42,7 @@ function attachRaceSocketListeners(
   socket.off('race:finished');
   socket.off('anti-cheat:warning');
   socket.off('anti-cheat:disqualified');
+  socket.off('trust:updated');
 
   socket.on('race:updated', (updated) => {
     set({ activeRace: updated, leaderboard: updated.racers });
@@ -64,7 +66,17 @@ function attachRaceSocketListeners(
     }));
   });
 
-    socket.on('race:finished', ({ results }) => {
+    socket.on('race:finished', ({ results, trustRewards }) => {
+      const userId = useAuthStore.getState().user?.id;
+      const reward = userId ? trustRewards?.[userId] : undefined;
+      if (reward && userId) {
+        const user = useAuthStore.getState().user;
+        if (user) {
+          useAuthStore.setState({
+            user: { ...user, trustScore: reward.trustScoreAfter },
+          });
+        }
+      }
       set((s) => ({
         activeRace: s.activeRace
           ? {
@@ -75,15 +87,31 @@ function attachRaceSocketListeners(
             }
           : null,
         leaderboard: results,
+        lastRaceTrustBonus: reward?.cleanRace && reward.delta > 0 ? reward.delta : null,
       }));
     });
 
-  socket.on('anti-cheat:warning', ({ message }) => {
-    set({ cheatWarning: message });
+  socket.on('trust:updated', ({ trustScoreAfter }) => {
+    const user = useAuthStore.getState().user;
+    if (user) {
+      useAuthStore.setState({ user: { ...user, trustScore: trustScoreAfter } });
+    }
   });
 
-  socket.on('anti-cheat:disqualified', ({ message }) => {
+  socket.on('anti-cheat:warning', ({ message, trustScoreAfter }) => {
     set({ cheatWarning: message });
+    const user = useAuthStore.getState().user;
+    if (user) {
+      useAuthStore.setState({ user: { ...user, trustScore: trustScoreAfter } });
+    }
+  });
+
+  socket.on('anti-cheat:disqualified', ({ message, trustScoreAfter }) => {
+    set({ cheatWarning: message });
+    const user = useAuthStore.getState().user;
+    if (user) {
+      useAuthStore.setState({ user: { ...user, trustScore: trustScoreAfter } });
+    }
   });
 
   set({ socketListenersReady: true });
@@ -94,6 +122,7 @@ export const useRaceStore = create<RaceState>((set, get) => ({
   leaderboard: [],
   countdown: null,
   cheatWarning: null,
+  lastRaceTrustBonus: null,
   socketListenersReady: false,
 
   createRace: async (config) => {
@@ -183,6 +212,7 @@ export const useRaceStore = create<RaceState>((set, get) => ({
         finishedAt: new Date().toISOString(),
       },
       leaderboard: results,
+      lastRaceTrustBonus: null,
     });
   },
 
@@ -192,6 +222,7 @@ export const useRaceStore = create<RaceState>((set, get) => ({
       leaderboard: [],
       countdown: null,
       cheatWarning: null,
+      lastRaceTrustBonus: null,
       socketListenersReady: false,
     }),
 }));
