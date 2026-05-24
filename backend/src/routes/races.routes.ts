@@ -117,7 +117,7 @@ export function createRacesRoutes(
   });
 
   router.post('/:raceId/dev/finish', auth, async (req, res) => {
-    if (env.NODE_ENV === 'production') {
+    if (env.NODE_ENV === 'production' && !env.ALLOW_DEV_FINISH) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

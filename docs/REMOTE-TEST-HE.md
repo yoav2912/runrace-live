@@ -86,9 +86,30 @@ npm run start:tunnel
 
 ### אצל החבר
 
-1. מתקין **Expo Go** מהחנות (Android / iPhone).
-2. סורק את ה-**QR** שלך (מסך Expo).
-3. האפליקציה נטענת — **מכל מקום בארץ**, בלי אותו Wi‑Fi.
+**אופציה A — QR + tunnel (אם עובד)**
+
+1. מתקין **Expo Go** מהחנות.
+2. סורק את ה-**QR** שלך.
+
+אם tunnel נכשל (`failed to start tunnel`):
+
+1. אצלך: `npx expo login` (חשבון Expo חינמי)
+2. `npm install` בשורש הפרויקט
+3. נסה שוב `npm run dev:mobile:tunnel`
+
+**אופציה B — בלי tunnel (הכי אמין למרחוק)**
+
+החבר מריץ את האפליקציה **על המחשב שלו** (אותו `.env` עם כתובת Render):
+
+```bash
+git clone https://github.com/yoav2912/runrace-live.git
+cd runrace-live
+npm install
+# ערוך apps/mobile/.env — אותה כתובת Render כמו אצלך
+npm run dev:mobile
+```
+
+שניכם מתחברים ל-**אותו שרת Render** — לא צריך QR ממך ולא tunnel.
 
 ### אצלך
 

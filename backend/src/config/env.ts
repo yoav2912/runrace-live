@@ -14,6 +14,11 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().default(120),
   ML_CHEAT_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
+  /** כפתורי dev finish גם על Render (רק לבדיקות — כבה לפני production אמיתי) */
+  ALLOW_DEV_FINISH: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
+import { API_URL } from '@/config/serverUrls';
 import { getRedirectUriForSupabaseDashboard } from '@/services/supabaseAuth';
 import { colors, spacing } from '@/theme/colors';
 
@@ -51,7 +52,9 @@ export default function LoginScreen() {
 
       {__DEV__ && (
         <Text style={styles.devHint}>
-          ל-Google/Apple: הוסף ב-Supabase → Auth → URL Configuration:{'\n'}
+          API: {API_URL}
+          {'\n'}
+          ל-Google/Apple: Supabase → Auth → URL Configuration:{'\n'}
           {getRedirectUriForSupabaseDashboard()}
         </Text>
       )}

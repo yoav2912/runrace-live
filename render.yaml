@@ -31,3 +31,5 @@ services:
         value: 60000
       - key: RATE_LIMIT_MAX
         value: 120
+      - key: ALLOW_DEV_FINISH
+        value: 'true'

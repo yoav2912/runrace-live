@@ -1,7 +1,12 @@
+const { loadEnvFile, resolveUrl } = require('./loadEnvFile');
+
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = () => {
-  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
-
+  const fileEnv = loadEnvFile();
+  const googleMapsApiKey =
+    fileEnv.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+  const apiUrl = resolveUrl('EXPO_PUBLIC_API_URL');
+  const socketUrl = resolveUrl('EXPO_PUBLIC_SOCKET_URL', apiUrl);
   return {
     name: 'RunRace Live',
     slug: 'runrace-live',
@@ -61,6 +66,8 @@ module.exports = () => {
         projectId: 'runrace-live',
       },
       googleMapsApiKey,
+      apiUrl,
+      socketUrl,
     },
   };
 };

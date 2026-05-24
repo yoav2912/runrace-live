@@ -1,8 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents } from '@runrace/shared';
 import * as SecureStore from 'expo-secure-store';
+import { SOCKET_URL } from '@/config/serverUrls';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? 'http://localhost:4000';
 
 let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
 
