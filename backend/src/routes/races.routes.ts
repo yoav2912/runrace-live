@@ -12,6 +12,7 @@ import {
   emitMatchmakingStats,
   tryJoinMatchmakingQueue,
 } from '../modules/matchmaking/matchmakingActions';
+import { paramString } from '../utils/routeParams';
 
 const createRaceSchema = z.object({
   type: z.enum(['distance', 'time', 'sprint', 'interval', 'custom', 'ghost']),
@@ -68,7 +69,7 @@ export function createRacesRoutes(
     }
   });
 
-  router.post('/matchmaking/leave', auth, (_req, res) => {
+  router.post('/matchmaking/leave', auth, (req, res) => {
     matchmakingService.dequeue(req.user!.id);
     if (io) emitMatchmakingStats(io);
     res.json({ ok: true });
@@ -124,23 +125,24 @@ export function createRacesRoutes(
     const winnerUserId =
       typeof req.body?.winnerUserId === 'string' ? req.body.winnerUserId : req.user!.id;
 
-    const results = raceEngine.forceFinishForDev(req.params.raceId, winnerUserId);
+    const raceId = paramString(req.params.raceId);
+    const results = raceEngine.forceFinishForDev(raceId, winnerUserId);
     if (!results) {
       res.status(400).json({ error: 'Race not live or not found' });
       return;
     }
 
     try {
-      await raceRepo.saveReplay(req.params.raceId, { results, finishedAt: new Date() });
+      await raceRepo.saveReplay(raceId, { results, finishedAt: new Date() });
     } catch {
       /* optional persistence */
     }
 
     if (io) {
-      const live = raceEngine.toLiveRace(req.params.raceId);
-      if (live) io.to(`race:${req.params.raceId}`).emit('race:updated', live);
-      io.to(`race:${req.params.raceId}`).emit('race:finished', {
-        raceId: req.params.raceId,
+      const live = raceEngine.toLiveRace(raceId);
+      if (live) io.to(`race:${raceId}`).emit('race:updated', live);
+      io.to(`race:${raceId}`).emit('race:finished', {
+        raceId,
         results,
       });
     }
@@ -149,7 +151,7 @@ export function createRacesRoutes(
   });
 
   router.get('/:raceId', auth, async (req, res) => {
-    const live = raceEngine.toLiveRace(req.params.raceId);
+    const live = raceEngine.toLiveRace(paramString(req.params.raceId));
     if (!live) {
       res.status(404).json({ error: 'Race not found' });
       return;

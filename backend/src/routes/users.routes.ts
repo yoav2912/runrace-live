@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { UserRepository } from '../repositories/UserRepository';
 import { createAuthMiddleware } from '../middleware/auth';
 import type { Env } from '../config/env';
+import { paramString } from '../utils/routeParams';
 
 export function createUsersRoutes(env: Env, users: UserRepository): Router {
   const router = Router();
@@ -14,7 +15,7 @@ export function createUsersRoutes(env: Env, users: UserRepository): Router {
   });
 
   router.get('/profile/:username', auth, async (req, res) => {
-    const profile = await users.findByUsername(req.params.username);
+    const profile = await users.findByUsername(paramString(req.params.username));
     if (!profile) {
       res.status(404).json({ error: 'User not found' });
       return;

@@ -50,6 +50,7 @@ export class RaceEngine {
       config,
       status: 'lobby',
       participants: new Map(),
+      spectators: new Set(),
     };
     this.races.set(id, race);
     return race;
