@@ -13,7 +13,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm ci && npm run build -w @runrace/shared && npm run build -w backend
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm ci && npm run build -w @runrace/shared && npm run build -w backend
     startCommand: NODE_ENV=production npm run start -w backend
     healthCheckPath: /health
     envVars:
