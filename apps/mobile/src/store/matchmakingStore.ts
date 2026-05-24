@@ -50,7 +50,11 @@ async function attachListeners(
 
   socket.on('matchmaking:matched', async ({ race }) => {
     set({ status: 'idle', selectedDistanceM: null, searchers: 0 });
-    await useRaceStore.getState().enterRace(race);
+    try {
+      await useRaceStore.getState().enterRace(race);
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'הצטרפות למירוץ נכשלה' });
+    }
   });
 
   set({ listenersAttached: true });

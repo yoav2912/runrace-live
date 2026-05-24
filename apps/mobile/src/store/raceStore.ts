@@ -116,10 +116,10 @@ export const useRaceStore = create<RaceState>((set, get) => ({
   },
 
   enterRace: async (race) => {
-    set({ activeRace: race, leaderboard: race.racers, countdown: null });
     const socket = await getSocket();
     attachRaceSocketListeners(socket, set, get);
     await get().connectLive(race.id);
+    set({ activeRace: race, leaderboard: race.racers, countdown: null });
   },
 
   setReady: async () => {
