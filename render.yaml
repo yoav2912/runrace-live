@@ -33,3 +33,5 @@ services:
         value: 120
       - key: ALLOW_DEV_FINISH
         value: 'true'
+      - key: ADMIN_API_KEY
+        value: runrace-dev-trust-key

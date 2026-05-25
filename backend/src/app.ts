@@ -14,6 +14,7 @@ import { createRacesRoutes } from './routes/races.routes';
 import { createSocialRoutes } from './routes/social.routes';
 import { createGamificationRoutes } from './routes/gamification.routes';
 import { createAdminRoutes } from './routes/admin.routes';
+import { createDevRoutes } from './routes/dev.routes';
 
 type Io = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -50,6 +51,7 @@ export function createApp(env: Env, io?: Io) {
   app.use('/api/social', createSocialRoutes(env, pool));
   app.use('/api/gamification', createGamificationRoutes(env, pool));
   app.use('/api/admin', createAdminRoutes(env, pool));
+  app.use('/api/dev', createDevRoutes(env, users));
 
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);

@@ -79,6 +79,27 @@ export class UserRepository {
     };
   }
 
+  async setTrustScore(userId: string, trustScore: number, reason: string): Promise<number> {
+    const clamped = Math.max(0, Math.min(100, trustScore));
+    const { rows } = await this.pool.query(
+      `SELECT trust_score FROM users WHERE id = $1`,
+      [userId],
+    );
+    const previous = Number(rows[0]?.trust_score ?? 0);
+    const delta = clamped - previous;
+
+    await this.pool.query(
+      `UPDATE users SET trust_score = $2, updated_at = NOW() WHERE id = $1`,
+      [userId, clamped],
+    );
+    await this.pool.query(
+      `INSERT INTO trust_score_history (user_id, previous_score, new_score, delta, reason)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, previous, clamped, delta, reason],
+    );
+    return clamped;
+  }
+
   async updateTrustScore(userId: string, delta: number, reason: string): Promise<number> {
     const { rows } = await this.pool.query(
       `UPDATE users SET trust_score = GREATEST(0, LEAST(100, trust_score + $2)), updated_at = NOW()
